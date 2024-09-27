@@ -26,8 +26,9 @@ struct ApiResponse {
 }
 
 // Function to fetch balance of a single address
+//https://blockstream.info/testnet/api/address/${address}/utxo
 async fn get_balance(client: &Client, address: &str) -> Result<u64, Box<dyn Error>> {
-    let url = format!("https://blockstream.info/api/address/{}/utxo", address);
+    let url = format!("https://blockstream.info/testnet/api/address/{}/utxo", address);
     let response = client.get(&url).send().await?.json::<Vec<ApiResponse>>().await?;
 
     // Sum confirmed balances
@@ -37,16 +38,6 @@ async fn get_balance(client: &Client, address: &str) -> Result<u64, Box<dyn Erro
 }
 
 // Function to decode the base58 xpub and derive addresses
-/*fn decode_xpub(xpub: &str) -> Result<Vec<u8>, Box<dyn Error>> {
-    let decoded_xpub = xpub.from_base58().map_err(|e: FromBase58Error| Box::new(e) as Box<dyn Error>)?;
-    Ok(decoded_xpub)
-}*/
-
-// Function to decode the base58 xpub and derive addresses
-/*fn decode_xpub(xpub: &str) -> Result<Vec<u8>> {
-    let decoded_xpub = xpub.from_base58().map_err(|e: FromBase58Error| anyhow::Error::msg(e.to_string()))?;
-    Ok(decoded_xpub)
-}*/
 
 fn decode_xpub(xpub: &str) -> Result<Vec<u8>, anyhow::Error> {
     let decoded_xpub = xpub
