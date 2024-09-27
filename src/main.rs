@@ -65,7 +65,7 @@ fn derive_addresses(xpub: &str, count: u32) -> Result<Vec<String>, Box<dyn Error
         let child_pubkey = xpub.derive_pub(&secp, &path)?;
 
         // Convert to Bitcoin address (P2PKH format)
-        let address = Address::p2pkh(&child_pubkey.public_key, Network::Bitcoin);
+        let address = Address::p2pkh(&child_pubkey.public_key, Network::Testnet);
         addresses.push(address.to_string());
     }
 
