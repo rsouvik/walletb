@@ -43,10 +43,18 @@ async fn get_balance(client: &Client, address: &str) -> Result<u64, Box<dyn Erro
 }*/
 
 // Function to decode the base58 xpub and derive addresses
-fn decode_xpub(xpub: &str) -> Result<Vec<u8>> {
+/*fn decode_xpub(xpub: &str) -> Result<Vec<u8>> {
     let decoded_xpub = xpub.from_base58().map_err(|e: FromBase58Error| anyhow::Error::msg(e.to_string()))?;
     Ok(decoded_xpub)
+}*/
+
+fn decode_xpub(xpub: &str) -> Result<Vec<u8>, anyhow::Error> {
+    let decoded_xpub = xpub
+        .from_base58()
+        .map_err(|e: FromBase58Error| anyhow::Error::msg(format!("{:?}", e)))?;
+    Ok(decoded_xpub)
 }
+
 
 // Function to derive Bitcoin addresses from xpub
 fn derive_addresses(xpub: &str, count: u32) -> Result<Vec<String>, Box<dyn Error>> {
