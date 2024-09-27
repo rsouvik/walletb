@@ -7,7 +7,7 @@ use std::error::Error;
 use structopt::StructOpt;
 use tokio;
 
-// Command-line argument parsing added
+// Command-line argument parsing added new
 #[derive(StructOpt)]
 struct Cli {
     /// The extended public key (xpub) in base58 format
