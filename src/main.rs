@@ -7,7 +7,7 @@ use serde::Deserialize;
 use std::error::Error;
 use structopt::StructOpt;
 use tokio;
-use base58::FromBase58;  // You'll need to add this crate to handle base58 decoding
+use base58::{FromBase58, FromBase58Error};  // Base58 decoding
 
 // Command-line argument parsing
 #[derive(StructOpt)]
@@ -36,12 +36,18 @@ async fn get_balance(client: &Client, address: &str) -> Result<u64, Box<dyn Erro
     Ok(total_balance)
 }
 
+// Function to decode the base58 xpub and derive addresses
+fn decode_xpub(xpub: &str) -> Result<Vec<u8>, Box<dyn Error>> {
+    let decoded_xpub = xpub.from_base58().map_err(|e: FromBase58Error| Box::new(e) as Box<dyn Error>)?;
+    Ok(decoded_xpub)
+}
+
 // Function to derive Bitcoin addresses from xpub
 fn derive_addresses(xpub: &str, count: u32) -> Result<Vec<String>, Box<dyn Error>> {
     let secp = Secp256k1::new();
 
-    // Decode base58 xpub
-    let decoded_xpub = xpub.from_base58()?;
+    // Decode the xpub key
+    let decoded_xpub = decode_xpub(xpub)?;
 
     // Use ExtendedPubKey::decode to create an extended public key from bytes
     let xpub = ExtendedPubKey::decode(&decoded_xpub)?;
@@ -49,9 +55,8 @@ fn derive_addresses(xpub: &str, count: u32) -> Result<Vec<String>, Box<dyn Error
     let mut addresses = Vec::new();
 
     for i in 0..count {
-        // Derive the address using the derivation path m/0/i
-        let derivation_path = format!("m/0/{}", i);
-        let path = DerivationPath::from_str(&derivation_path)?;
+        // Build the derivation path
+        let path = build_derivation_path(i);
         let child_pubkey = xpub.derive_pub(&secp, &path)?;
 
         // Convert to Bitcoin address (P2PKH format)
@@ -60,6 +65,12 @@ fn derive_addresses(xpub: &str, count: u32) -> Result<Vec<String>, Box<dyn Error
     }
 
     Ok(addresses)
+}
+
+// Helper function to build the derivation path
+fn build_derivation_path(index: u32) -> DerivationPath {
+    let path = format!("m/0/{}", index);
+    path.parse().expect("Invalid derivation path")
 }
 
 #[tokio::main]
