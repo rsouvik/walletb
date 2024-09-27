@@ -19,13 +19,11 @@ struct Cli {
     count: u32,
 }
 
-// API response structure for balance
 #[derive(Deserialize)]
 struct ApiResponse {
     confirmed: u64,
 }
 
-// Function to fetch balance of a single address
 //https://blockstream.info/testnet/api/address/${address}/utxo
 async fn get_balance(client: &Client, address: &str) -> Result<u64, Box<dyn Error>> {
     let url = format!("https://blockstream.info/testnet/api/address/{}/utxo", address);
@@ -37,8 +35,6 @@ async fn get_balance(client: &Client, address: &str) -> Result<u64, Box<dyn Erro
     Ok(total_balance)
 }
 
-// Function to decode the base58 xpub and derive addresses
-
 fn decode_xpub(xpub: &str) -> Result<Vec<u8>, anyhow::Error> {
     let decoded_xpub = xpub
         .from_base58()
@@ -46,15 +42,12 @@ fn decode_xpub(xpub: &str) -> Result<Vec<u8>, anyhow::Error> {
     Ok(decoded_xpub)
 }
 
-
-// Function to derive Bitcoin addresses from xpub
 fn derive_addresses(xpub: &str, count: u32) -> Result<Vec<String>, Box<dyn Error>> {
     let secp = Secp256k1::new();
 
     // Decode the xpub key
     let decoded_xpub = decode_xpub(xpub)?;
 
-    // Use ExtendedPubKey::decode to create an extended public key from bytes
     let xpub = ExtendedPubKey::decode(&decoded_xpub)?;
 
     let mut addresses = Vec::new();
@@ -72,7 +65,6 @@ fn derive_addresses(xpub: &str, count: u32) -> Result<Vec<String>, Box<dyn Error
     Ok(addresses)
 }
 
-// Helper function to build the derivation path
 fn build_derivation_path(index: u32) -> DerivationPath {
     let path = format!("m/0/{}", index);
     path.parse().expect("Invalid derivation path")
@@ -83,13 +75,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let args = Cli::from_args();
     println!("Fetching balances for xpub: {}", args.xpub);
 
-    // Derive addresses
     let addresses = derive_addresses(&args.xpub, args.count)?;
 
-    // Initialize Reqwest client
     let client = Client::new();
 
-    // Total balance variable
     let mut total_balance: u64 = 0;
 
     // Fetch and display balance for each address
@@ -103,4 +92,37 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("Total balance: {} satoshis", total_balance);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_xpub_valid() {
+        let valid_xpub = "xpub661MyMwAqRbcFxWNRRv6HoGmRuFZ2a43FAPX1YHgSoXQQFF4MumH9Sx5ecxa9GZcEqBeRBxHLXa5xnupTg6FpjoowHmg69vKwZYjt5mx5zt";
+        let decoded = decode_xpub(valid_xpub);
+        assert!(decoded.is_ok(), "Decoding should succeed for a valid xpub");
+    }
+
+    #[test]
+    fn test_decode_xpub_invalid() {
+        let invalid_xpub = "invalidkey";
+        let decoded = decode_xpub(invalid_xpub);
+        assert!(decoded.is_err(), "Decoding should fail for an invalid xpub");
+    }
+
+    #[test]
+    fn test_derive_addresses() {
+        let valid_xpub = "xpub661MyMwAqRbcFxWNRRv6HoGmRuFZ2a43FAPX1YHgSoXQQFF4MumH9Sx5ecxa9GZcEqBeRBxHLXa5xnupTg6FpjoowHmg69vKwZYjt5mx5zt";
+        let addresses = derive_addresses(valid_xpub, 5);
+        assert!(addresses.is_ok(), "Address derivation should succeed for a valid xpub");
+        assert_eq!(addresses.unwrap().len(), 5, "5 addresses should be derived");
+    }
+
+    #[test]
+    fn test_build_derivation_path() {
+        let path = build_derivation_path(0);
+        assert_eq!(path.to_string(), "m/0/0", "Path for index 0 should be m/0/0");
+    }
 }
