@@ -1,13 +1,15 @@
 use bitcoin::util::bip32::{DerivationPath, ExtendedPubKey};
 use bitcoin::network::constants::Network;
+use bitcoin::secp256k1::Secp256k1;
 use bitcoin::Address;
 use reqwest::Client;
 use serde::Deserialize;
 use std::error::Error;
 use structopt::StructOpt;
 use tokio;
+use base58::FromBase58;  // You'll need to add this crate to handle base58 decoding
 
-// Command-line argument parsing added new
+// Command-line argument parsing
 #[derive(StructOpt)]
 struct Cli {
     /// The extended public key (xpub) in base58 format
@@ -23,7 +25,7 @@ struct ApiResponse {
     confirmed: u64,
 }
 
-// Function to fetch balance of a single address using Reqwest and Tokio
+// Function to fetch balance of a single address
 async fn get_balance(client: &Client, address: &str) -> Result<u64, Box<dyn Error>> {
     let url = format!("https://blockstream.info/api/address/{}/utxo", address);
     let response = client.get(&url).send().await?.json::<Vec<ApiResponse>>().await?;
@@ -36,14 +38,21 @@ async fn get_balance(client: &Client, address: &str) -> Result<u64, Box<dyn Erro
 
 // Function to derive Bitcoin addresses from xpub
 fn derive_addresses(xpub: &str, count: u32) -> Result<Vec<String>, Box<dyn Error>> {
-    let xpub = ExtendedPubKey::from_str(xpub)?;
+    let secp = Secp256k1::new();
+
+    // Decode base58 xpub
+    let decoded_xpub = xpub.from_base58()?;
+
+    // Use ExtendedPubKey::decode to create an extended public key from bytes
+    let xpub = ExtendedPubKey::decode(&decoded_xpub)?;
+
     let mut addresses = Vec::new();
 
     for i in 0..count {
         // Derive the address using the derivation path m/0/i
         let derivation_path = format!("m/0/{}", i);
         let path = DerivationPath::from_str(&derivation_path)?;
-        let child_pubkey = xpub.derive_pub(&bitcoin::secp256k1::Secp256k1::new(), &path)?;
+        let child_pubkey = xpub.derive_pub(&secp, &path)?;
 
         // Convert to Bitcoin address (P2PKH format)
         let address = Address::p2pkh(&child_pubkey.public_key, Network::Bitcoin);
@@ -53,6 +62,7 @@ fn derive_addresses(xpub: &str, count: u32) -> Result<Vec<String>, Box<dyn Error
     Ok(addresses)
 }
 
+#[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let args = Cli::from_args();
     println!("Fetching balances for xpub: {}", args.xpub);
